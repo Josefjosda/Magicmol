@@ -1,8 +1,3 @@
-"""
-Pre-process the Chembl dataset:
-    1. Normalize the molecule (this step also removes stereochemical info).
-    2. Convert the SMILES to canonical form.
-"""
 from tqdm import tqdm
 from rdkit import Chem, RDLogger
 from rdkit.Chem.MolStandardize import rdMolStandardize
