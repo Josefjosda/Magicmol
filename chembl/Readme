@@ -1,0 +1,9 @@
+Data prepocessing
+
+The original dataset is available at https://www.aliyundrive.com/s/fdnhRw5rFDj, which was derived from ChEMBL30 (https://www.ebi.ac.uk/chembl/). 
+
+Three files are contained in this repository:
+
+1.  190W  - Vanilla data file 
+2.  database.smi  extracted SMILES
+3.  database.cleaned.smi  cleand by clean.py, 170W remained molecules
