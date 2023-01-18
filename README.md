@@ -18,9 +18,11 @@ However, we recommend you train the backbone model by yourself and leave it a cu
 
 Some modification is ongoing......
 
-## Acknowledge
+## Acknowledgement 
 
 If you think our research is interesting, consider citing this paper? 👇 
 
 Lin Chen, Qing Shen, Jungang Lou et al. Magicmol - A light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration, 10 October 2022, PREPRINT (Version 1) available at Research Square [https://doi.org/10.21203/rs.3.rs-2124702/v1]
+
+STONED-SELFIES is available at: https://github.com/aspuru-guzik-group/stoned-selfies
 
