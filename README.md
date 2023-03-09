@@ -13,7 +13,7 @@ The weight file is available at : https://drive.google.com/drive/folders/10LDOoQ
 
 Update: Model trained with SMILES is provided also in the above link. 
 
-However, we recommend you train the backbone model by yourself and leave it a cup of tea time (approximately 15 min on a single RTX3090) to finish the this (XD) to experience how fast the process is finished.
+However, we recommend you train the backbone model by yourself and leave it a cup of tea time (approximately 15 min on a single RTX3090) to finish this (XD) and experience how fast the process is finished.
 
 ## But how to run ? 
 
