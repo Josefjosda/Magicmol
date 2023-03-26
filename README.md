@@ -3,9 +3,21 @@
 
 Implemention of paper : Magicmol - A light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration https://www.researchsquare.com/article/rs-2124702/v1
 
-## Dataset 
+
+# Data cleaning and preparation
+
+## Training Data
 
 Original ChEMBL30 (https://www.ebi.ac.uk/chembl/) dataset, cleaned dataset are available at : https://drive.google.com/drive/folders/1ULI0ZxBk26EiCw_p0LnLB1ckgstWK0Hq?usp=sharing
+
+190W: Original Chembl-30 small molecule dataset
+
+database.cleaned.smi / database.smi : pure SMILES data / SMILES data cleaned by clean.py  
+
+database_smiles_0.25.pkl / database_smiles_0.5.pkl : random choosed 25% / 50% of the cleaned molecule data
+
+# Data Cleaning
+` python clean.py --in_path database.smi --out_path database_cleaned.smi  --vocab_path ../vocab/chembl_selfies_vocab.yaml `
 
 
 ## Model Weight
