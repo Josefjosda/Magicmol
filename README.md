@@ -48,6 +48,19 @@ For example, training with SMILES:
 
 ` python train.py --num_embeddings 101  --vocab_path ./vocab/chembl_regex_vocab.yaml  --which_vocab regex` 
 
+# SA Optimization
+
+In our work, optimization is done by varying the SA score judged by SYBA from sampled molecules derived in the well-trained backbone model. 
+
+For positive optimization:
+
+` python synthetic_accessibility_modification.py --model_weight_path ../model_parameters/trained_model.pth  --use_syba True  --optim_task  posi`
+
+
+For negative optimization:
+
+` python synthetic_accessibility_modification.py --model_weight_path ../model_parameters/trained_model.pth  --use_syba True  --optim_task  nega`
+
 
 
 # Acknowledgement 
