@@ -71,3 +71,5 @@ Lin Chen, Qing Shen, Jungang Lou et al. Magicmol - A light-weighted pipeline for
 
 STONED-SELFIES is available at: https://github.com/aspuru-guzik-group/stoned-selfies
 
+SYBA is available at https://github.com/lich-uct/syba
+
