@@ -16,7 +16,7 @@ database.cleaned.smi / database.smi : pure SMILES data / SMILES data cleaned by 
 
 database_smiles_0.25.pkl / database_smiles_0.5.pkl : random choosed 25% / 50% of the cleaned molecule data
 
-# Data Cleaning
+## Data Cleaning
 ` python clean.py --in_path database.smi --out_path database_cleaned.smi  --vocab_path ../vocab/chembl_selfies_vocab.yaml `
 
 
