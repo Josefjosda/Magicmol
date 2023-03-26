@@ -3,6 +3,10 @@
 
 Implemention of paper : Magicmol - A light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration https://www.researchsquare.com/article/rs-2124702/v1
 
+Magicmol provides a light-weighted pipeline for de novo novel molecule generation and evolution (combine with STONED-SELFIES), and can be utilized for either positive sampling or negative sampling. It can be visulized in the following picture. 
+
+![image](example.jpg)
+
 
 # Data cleaning and preparation
 
