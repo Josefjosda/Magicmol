@@ -7,10 +7,12 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from rdkit import Chem
 import selfies as sf
+from fvcore.nn import FlopCountAnalysis, parameter_count_table
 import pickle
 from dataloader import dataloader_gen
 from dataloader import SELFIEVocab, RegExVocab, CharVocab
 from model import RNN
+import argparse
 
 # suppress rdkit error
 from rdkit import rdBase
@@ -19,8 +21,8 @@ rdBase.DisableLog('rdApp.error')
 
 def make_vocab(config):
     # load vocab
-    which_vocab = config["which_vocab"]
-    vocab_path = config["vocab_path"]
+    which_vocab = config.which_vocab
+    vocab_path = config.vocab_path
 
     if which_vocab == "selfies":
         return SELFIEVocab(vocab_path)
@@ -78,31 +80,46 @@ def compute_valid_rate(molecules):
 
 
 if __name__ == "__main__":
+    #Args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--out_dir', type=str, default='./model_parameters')
+    parser.add_argument('--dataset_dir', type=str, default="./chembl/database_smiles_0.5.pkl")
+    #vocab choosing - "selfies", "regex" , "DeepSMILES"
+    parser.add_argument('--which_vocab', type=str, default="selfies")
+    parser.add_argument('--vocab_path', type=str, default="./vocab/chembl_selfies_vocab.yaml")
+    parser.add_argument('--percentage', type=float, default=1)
+    #RNN config
+    parser.add_argument('--batch_size', type=int, default=512)
+    parser.add_argument('--rnn_type', type=str, default='GRU')
+    #SELFIES - 148 , regex - 101, DeepSMILES - 129
+    parser.add_argument('--num_embeddings', type=int, default=148)
+    parser.add_argument('--embedding_dim', type=int, default=512)
+    parser.add_argument('--input_size', type=int, default=512)
+    parser.add_argument('--hidden_size', type=int, default=512)
+    parser.add_argument('--num_layers', type=int, default=3)
+    parser.add_argument('--dropout', type=int, default=0)
+    parser.add_argument('--shuffle', type=bool, default=True)
+    parser.add_argument('--num_epoch', type=int, default=10)
+    parser.add_argument('--which_optimizer', type=str, default='adam')
+    parser.add_argument('--learning_rate', type=float, default=1e-3)
+    parser.add_argument('--weight_decay', type=float, default=1e-4)
+
+    config = parser.parse_args()
     # detect cpu or gpu
-    device = torch.device(
-        'cuda' if torch.cuda.is_available() else 'cpu'
-    )
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('device: ', device)
-
-    config_dir = "train.yaml"
-    with open(config_dir, 'r') as f:
-        config = yaml.full_load(f)
-
-    # directory for results
-    out_dir = config['out_dir']
+    out_dir = config.out_dir
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-
     # training data
-    dataset_dir = config['dataset_dir']
-    which_vocab = config['which_vocab']
-    vocab_path = config['vocab_path']
-    percentage = config['percentage']
-
+    dataset_dir = config.dataset_dir
+    which_vocab = config.which_vocab
+    vocab_path = config.vocab_path
+    percentage = config.percentage
     # create dataloader
-    batch_size = config['batch_size']
-    shuffle = config['shuffle']
+    batch_size = config.batch_size
+    shuffle = config.shuffle
     num_workers = os.cpu_count()
     print('number of workers to load data: ', num_workers)
     print('which vocabulary to use: ', which_vocab)
@@ -112,22 +129,26 @@ if __name__ == "__main__":
     )
 
     # model and training configuration
-    rnn_config = config['rnn_config']
+    rnn_config = {'num_embeddings': config.num_embeddings, 'embedding_dim': config.embedding_dim,
+                  'rnn_type': config.rnn_type, 'input_size': config.input_size,
+                  'hidden_size': config.hidden_size, 'num_layers': config.num_layers, 'dropout': config.dropout}
     model = RNN(rnn_config).to(device)
-    learning_rate = config['learning_rate']
-    weight_decay = config['weight_decay']
+    #show model parameters and structures
+    print(parameter_count_table(model))
+    learning_rate = config.learning_rate
+    weight_decay = config.weight_decay
 
     # Making reduction="sum" makes huge difference
     # in valid rate of sampled molecules.
     loss_function = nn.CrossEntropyLoss(reduction='sum')
 
     # create optimizer
-    if config['which_optimizer'] == "adam":
+    if config.which_optimizer == "adam":
         optimizer = torch.optim.Adam(
             model.parameters(), lr=learning_rate,
             weight_decay=weight_decay, amsgrad=True
         )
-    elif config['which_optimizer'] == "sgd":
+    elif config.which_optimizer == "sgd":
         optimizer = torch.optim.SGD(
             model.parameters(), lr=learning_rate,
             weight_decay=weight_decay, momentum=0.9
@@ -151,14 +172,18 @@ if __name__ == "__main__":
     # train and validation, the results are saved.
     train_losses = []
     best_valid_rate = 0
-    num_epoch = config['num_epoch']
+    num_epoch = config.num_epoch
 
-    if os.path.exists(os.path.join(config['out_dir'], 'trained_model.pth')):
-        path = os.path.join(config['out_dir'], 'trained_model.pth')
-        checkpoint = torch.load(path)
-        model.load_state_dict(checkpoint)
-        start_epoch = checkpoint['epoch']
-        print(f'Continue training with file : {path}')
+    if os.path.exists(os.path.join(config.out_dir, 'trained_model.pth')):
+        path = os.path.join(config.out_dir, 'trained_model.pth')
+        try:
+            checkpoint = torch.load(path)
+            model.load_state_dict(checkpoint)
+            start_epoch = checkpoint['epoch']
+            print(f'Continue training with file : {path}')
+        except BaseException:
+            print('Parameters mismatch, start de novo training!')
+            start_epoch = 0
     else:
         start_epoch = 0
 
@@ -172,11 +197,9 @@ if __name__ == "__main__":
             # use <eos> for input and we don't need <sos> for
             # output during traning.
             lengths = [length - 1 for length in lengths]
-
             optimizer.zero_grad()
             data = data.to(device)
             preds = model(data, lengths)
-
             # The <sos> token is removed before packing, because
             # we don't need <sos> of output during training.
             # the image_captioning project uses the same method
@@ -198,6 +221,7 @@ if __name__ == "__main__":
 
             # accumulate loss over mini-batches
             train_loss += loss.item()  # * data.size()[0]
+
 
         train_losses.append(train_loss / train_size)
 
@@ -227,7 +251,9 @@ if __name__ == "__main__":
             }
             torch.save(checkpoint, os.path.join(out_dir, 'trained_model.pth'))
 
-
     # save train and validation losses
         with open(out_dir + 'loss.yaml', 'w') as f:
             yaml.dump(train_losses, f)
+
+
+
