@@ -10,6 +10,7 @@ import numpy as np
 from torch.utils.data import Dataset,DataLoader
 import glob
 import sys
+import seaborn as sns
 sys.path.insert(0,'../')
 from model import RNN
 import torch.nn.functional as F
@@ -22,7 +23,10 @@ from torch.nn.utils.rnn import pad_sequence
 from dataloader import dataloader_gen
 from  syba.syba import SybaClassifier
 from sample import sample
-
+from fvcore.nn import FlopCountAnalysis, parameter_count_table
+from rdkit import rdBase
+rdBase.DisableLog('rdApp.error')
+import argparse
 
 
 class SELFIEVocab:
@@ -38,7 +42,7 @@ class SELFIEVocab:
     def tokenize_smiles(self, mol):
         """convert the smiles to selfies, then return
         integer tokens."""
-        ints = [self.vocab['<sos>']]
+        ints = [self.vocab['<start>']]
 
         # encoded_selfies = sf.encoder(smiles)
         selfies_list = list(sf.split_selfies(mol))
@@ -46,7 +50,7 @@ class SELFIEVocab:
         for token in selfies_list:
             ints.append(self.vocab[token])
 
-        ints.append(self.vocab['<eos>'])
+        ints.append(self.vocab['<end>'])
 
         return ints
 
@@ -64,10 +68,6 @@ def mol2image(x, n=2048):
     except:
         return [np.nan]
 
-def simple_moving_average(previous_values, new_value, ma_window_size=10):
-    value_ma = np.sum(previous_values[-(ma_window_size-1):]) + new_value
-    value_ma = value_ma/(len(previous_values[-(ma_window_size-1):]) + 1)
-    return value_ma
 
 def get_fp(smiles):
 
@@ -143,12 +143,9 @@ def fit_model(valid_model,feature,score,ensemble_size=None):
         print(r2)
         eval_metrics.append(r2)
         # metrics_type = 'R^2 score'
-
         i += 1
 
     # return eval_metrics, metrics_type
-
-import seaborn as sns
 
 def plot_hist(prediction,label):
 
@@ -158,12 +155,13 @@ def plot_hist(prediction,label):
     print("Percentage of predictions within easy to systhesis region:", percentage_in_threshold)
     ax = sns.distplot(prediction,kde_kws={"label":f"{label}"})
     plt.axvline(x=0.0)
-    ax.set(xlabel='Predicted systhetic score',
-           title='Distribution of predicted systhetic score for generated molecules')
+    ax.set(xlabel='Predicted synthetic score',
+           title='Distribution of predicted synthetic score of generated molecules')
     plt.legend()
     # plt.show()
 
 class Reinforcement(object):
+
     def __init__(self, generator, predictor, get_loss, vocab, device, optimizer):
         super(Reinforcement, self).__init__()
         self.generator = generator
@@ -226,22 +224,7 @@ class Reinforcement(object):
             if not rl_score.all():
                 continue
 
-            #because of the unbalanced distribution of the molecules, we take two positive-score molecules and
-            # a single negative_score molecules for learning during one certain epoch
-            # negamols_index_logi = syba_score < 0
-            # index = np.where(negamols_index_logi == True)[0]
-            # min_val = np.sort(syba_score[index])
-            # # if len(min_val) >= 2:
-            # min_val = min_val[0]
-            # nega_index = np.argwhere(syba_score == min_val).flatten()[0]
-            # #
-            # n_batch = 5
-            # min_score_list = np.sort(syba_score)
-            # min_score = min_score_list[0]
-            # index =  [np.argwhere(syba_score == min_score).flatten()[0] ]
-            # index = [index]
-            # index = np.where(posi_index_logi == True)[0]
-
+            # Reward Truncate, if you want get a 'collapsed' model, comment the below part.
             valid_mols_count = len(rl_score)
             waive_optim_threshold = 150
             syba_score = np.array(syba_score)
@@ -287,7 +270,7 @@ class Reinforcement(object):
                                                           provided_prefix= x,device=device,rein=True,
                                                           vocab=vocab,first_time=False,hidden=hidden)
 
-                softmax_probs = F.log_softmax(torch.squeeze(last_output,dim=1), dim=1)
+                softmax_probs = F.log_softmax(torch.squeeze(last_output,dim=1),dim=1)
                 top_i = trajectory_input[item]
                 if kwarg['task'] == 'optim_n':
                     rl_loss -= (softmax_probs[i, top_i] * discounted_reward)
@@ -303,83 +286,83 @@ class Reinforcement(object):
         self.optimizer.zero_grad()
         rl_loss.backward()
         self.optimizer.step()
-
-
-            # print(f"rl_loss batch:{epoch} - {rl_loss}" )
-            # total_reward = total_reward / n_batch
-            # if rl_loss >= torch.tensor(0):
-            # if grad_clipping is not None:
-            #     torch.nn.utils.clip_grad_norm_(self.generator.parameters(),
-            #                                    grad_clipping)
-
         return rl_score_sum , rl_loss.detach().item()
 
 if __name__ == "__main__":
+    #Args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--out_dir', type=str, default='../model_parameters')
+    # parser.add_argument('--dataset_dir', type=str, default="./chembl/database_smiles_0.5.pkl")
+    parser.add_argument('--model_weight_path',type=str, default='../model_parameters/trained_model.pth')
+    parser.add_argument('--vocab_path', type=str, default="../vocab/chembl_selfies_vocab.yaml")
+    #RNN config
+    parser.add_argument('--batch_size', type=int, default=512)
+    parser.add_argument('--rnn_type', type=str, default='GRU')
+    #SELFIES - 148 , regex - 101, DeepSMILES - 129
+    parser.add_argument('--num_embeddings', type=int, default=148)
+    parser.add_argument('--embedding_dim', type=int, default=512)
+    parser.add_argument('--input_size', type=int, default=512)
+    parser.add_argument('--hidden_size', type=int, default=512)
+    parser.add_argument('--num_layers', type=int, default=3)
+    parser.add_argument('--dropout', type=int, default=0)
+    parser.add_argument('--num_epoch', type=int, default=10)
+    parser.add_argument('--which_optimizer', type=str, default='adam')
+    parser.add_argument('--learning_rate', type=float, default=1e-3)
+    parser.add_argument('--weight_decay', type=float, default=1e-4)
+    #It should be better to use syba, if syba is not available for you,
+    # use a random forest model as the substitution. (not recommended)
+    parser.add_argument('--use_syba', type=bool, default=True)
+    #'posi' or 'nega'
+    parser.add_argument('--optim_task', type=str, default='posi')
+
+    config = parser.parse_args()
 
 
+    plt.figure(figsize=(8,6))
     torch.backends.cudnn.enabled = True
     device = torch.device(
         'cuda' if torch.cuda.is_available() else 'cpu'
     )
     print('device: ', device)
 
-    config_dir = "reinforcement.yaml"
-    with open(config_dir, 'r') as f:
-        config = yaml.full_load(f)
 
-
-    vocab_path = config['vocab_path']
+    vocab_path = config.vocab_path
     # create dataloader
-    batch_size = config['batch_size']
-    shuffle = config['shuffle']
+    batch_size = config.batch_size
 
-    rnn_config = config['rnn_config']
+    rnn_config = {'num_embeddings': config.num_embeddings, 'embedding_dim': config.embedding_dim,
+                  'rnn_type': config.rnn_type, 'input_size': config.input_size,
+                  'hidden_size': config.hidden_size, 'num_layers': config.num_layers, 'dropout': config.dropout}
+
     model = RNN(rnn_config).to(device)
+    print(parameter_count_table(model))
     model.train()
 
+    learning_rate = config.learning_rate
+    weight_decay = config.weight_decay
 
-    # for param in model.parameters():
-    #     param.requires_grad = True
 
-    learning_rate = config['learning_rate']
-    weight_decay = config['weight_decay']
-    # if config['which_optimizer'] == "adam":
-    #     optimizer = torch.optim.Adam(
-    #         model.parameters(), lr=learning_rate,
-    #         weight_decay=weight_decay, amsgrad=True
-    #     )
-
-    # path = '../model_parameters/15_epoch.pth'
-    # checkpoint = torch.load(path, map_location=device)
-    # model.load_state_dict(checkpoint['net'])
-    # optimizer_state_dict = checkpoint['optimizer']
-    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
-    #                                      weight_decay=weight_decay)
-    # optimizer.load_state_dict(optimizer_state_dict)
-    # print(f"Load model parameters from {path}.")
-
-    if os.path.exists('../model_parameters/trained_model.pth'):
-        path = '../model_parameters/trained_model.pth'
-        checkpoint = torch.load(path,map_location=device)
+    #load trained weight
+    model_weight_path = config.model_weight_path
+    if os.path.exists(model_weight_path):
+        checkpoint = torch.load(model_weight_path, map_location=device)
         model.load_state_dict(checkpoint['net'])
         optimizer_state_dict = checkpoint['optimizer']
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
             weight_decay=weight_decay)
         optimizer.load_state_dict(optimizer_state_dict)
         # start_epoch = checkpoint['epoch']
-        print(f"Load model parameters from {path}.")
+        print(f"Load model parameters from {model_weight_path}.")
     else:
         optimizer = torch.optim.Adadelta(
             model.parameters(), lr=learning_rate,
             weight_decay=weight_decay)
 
-    use_syba = True
-    ensemble_size = 5
+    use_syba = config.use_syba
+    if not use_syba:
+        ensemble_size = 5
 
-
-    #It should be better to use syba, if syba is not available for you,
-    # use a random forest model as the substitution.
-    if use_syba :
+    if use_syba:
         validate_model = SybaClassifier()
         validate_model.fitDefaultScore()
         sys_valid_model = validate_model
@@ -390,33 +373,26 @@ if __name__ == "__main__":
 
         sys_valid_model = []
         for i in range(ensemble_size):
-           sys_valid_model.append(sys_valid_model_instance(n_estimators=sys_valid_model_params['n_estimators'],
-                                                           n_jobs=sys_valid_model_params['n_jobs']))
+            sys_valid_model.append(sys_valid_model_instance(n_estimators=sys_valid_model_params['n_estimators'],
+                                                            n_jobs=sys_valid_model_params['n_jobs']))
         print('Predictor: machine learning model.')
         data = pd.read_csv('../chembl/with_score.csv')
         smiles_name = data['cmpdname']
         smiles = data['isosmiles']
-        smiles_score =  data['estimated_sys_score']
+        smiles_score = data['estimated_sys_score']
 
-        feature,_,_ = get_fp(smiles)
-        #Use machine learning model to fit the sys_score.
-        fit_model(valid_model=sys_valid_model,feature=feature,score=smiles_score,ensemble_size=ensemble_size)
-
-    # generated_smiles_path = glob.glob(pathname=config['datapath']+'/sampled_molecules_epoch*.smi')
-    # generated_smiles = []
-    # for file_path in generated_smiles_path:
-    #     with open(file_path) as f:
-    #         for line in f.readlines():
-    #             generated_smiles.append(line.strip())
+        feature, _, _ = get_fp(smiles)
+        # Use machine learning model to fit the sys_score.
+        fit_model(valid_model=sys_valid_model, feature=feature, score=smiles_score, ensemble_size=ensemble_size)
 
 
     # # Use selfies vocab to encode smiles.
-    vocab_path = config['vocab_path']
+    vocab_path = config.vocab_path
     vocab = SELFIEVocab(vocab_path)
     num_batches = 10
     num_samples = 1024
     sampled_mols = sample(model, num_batches=num_batches, num_samples=num_samples,
-           vocab=vocab, device=device, with_file=False, return_value=True)
+           vocab=vocab, device=device, with_file=False, return_valid_mols=True,which_vocab='selfies' )
 
     sys_score = []
 
@@ -427,143 +403,161 @@ if __name__ == "__main__":
                 sys_score.append(sys_valid_model.predict(mol=mol))
             except:
                 continue
-        print(f'Average systhesis score = {np.mean(sys_score)}')
+        print(f'Average synthesis score = {np.mean(sys_score)}')
 
     plot_hist(sys_score,label='former synthetic prediction')
     # plt.show()
 
 
-    n_policy = 10
-    nega_train_iterations =  15
-    posi_iterations =  10
-    RL_max = Reinforcement(model, sys_valid_model, get_score, vocab=vocab, device=device, optimizer=optimizer)
+    #Reinforcement learning parameters
+    n_policy = 20  #How many rounds in a single Epoch ?
+    nega_train_iterations =  15  #Negative optimization Epochs
+    posi_iterations =  5 #Positive optimization Epochs
+    optimtask = config.optim_task
 
+    RL_max = Reinforcement(model, sys_valid_model, get_score, vocab=vocab, device=device, optimizer=optimizer)
     reward_sum = []
     rl_losses = []
 
-    # optimize negative molecules
-    # for i in range(nega_train_iterations):
-    #     for j in trange(n_policy, desc='Policy gradient...'):
-    #         torch.cuda.empty_cache()
-    #         cur_reward, cur_loss = RL_max.policy_gradient(get_features=get_fp,task_type='optim_n')
-    #         reward_sum.append(cur_reward)
-    #         rl_losses.append(cur_loss)
-    #
-    #     # plt.plot(reward_sum)
-    #     # plt.xlabel('Training iteration')
-    #     # plt.ylabel('score_sum')
-    #     # plt.savefig(f'../figure/{i}_{j+1}_score_sum.png')
-    #     # plt.show()
-    #
-    #     plt.plot(rl_losses)
-    #     plt.xlabel('Training iteration')
-    #     plt.ylabel('Loss')
-    #     plt.savefig(f'../figure/{i}_{j+1}_Loss.png')
-    #     plt.show()
-    #
-    #     sampled_mols = sample(model, num_batches=num_batches, num_samples=num_samples,
-    #                           vocab=vocab, device=device, with_file=False, return_value=True)
-    #     if use_syba:
-    #         for i in range(len(sampled_mols)):
-    #             try:
-    #                 mol = Chem.MolFromSmiles(sampled_mols[i])
-    #                 sys_score.append(sys_valid_model.predict(mol=mol))
-    #             except:
-    #                 continue
-    #         print(f'Average systhesis score = {np.mean(sys_score)}')
-    #
-    #     # plot_hist(sys_score, label='systhetic prediction')
-    #     # plt.show()
-    #
-    #
-    #
-    #     checkpoint = {
-    #         "net": model.state_dict(),
-    #         'optimizer': optimizer.state_dict(),
-    #     }
-    #     torch.save(checkpoint, os.path.join(config['out_dir'], f'{nega_train_iterations}_epoch_negative.pth'))
+    # Negative optimization
+    if optimtask == 'nega':
+        for i in range(nega_train_iterations):
+            for j in trange(n_policy, desc='Policy gradient...'):
+                torch.cuda.empty_cache()
+                cur_reward, cur_loss = RL_max.policy_gradient(get_features=get_fp,task='optim_n')
+                reward_sum.append(cur_reward)
+                rl_losses.append(cur_loss)
+
+            # plt.plot(reward_sum)
+            # plt.xlabel('Training iteration')
+            # plt.ylabel('score_sum')
+            # plt.savefig(f'../figure/{i}_{j+1}_score_sum.png')
+            # plt.show()
+
+            plt.plot(rl_losses)
+            plt.xlabel('Training iteration')
+            plt.ylabel('Loss')
+            plt.savefig(f'../figure/{i}_{j+1}_Loss.png')
+            plt.show()
+
+            sampled_mols = sample(model, num_batches=num_batches, num_samples=num_samples,
+                                  vocab=vocab, device=device, with_file=False, return_value=True)
+            if use_syba:
+                for i in range(len(sampled_mols)):
+                    try:
+                        mol = Chem.MolFromSmiles(sampled_mols[i])
+                        sys_score.append(sys_valid_model.predict(mol=mol))
+                    except:
+                        continue
+                print(f'Average systhesis score = {np.mean(sys_score)}')
+
+            # plot_hist(sys_score, label='systhetic prediction')
+            # plt.show()
 
 
-    # optimize positive molecules
-    # for i in range(posi_iterations):
-    #     for j in trange(n_policy, desc='Policy gradient...'):
-    #         cur_reward, cur_loss = RL_max.policy_gradient(get_features=get_fp,task='optim_p')
-    #         # RL_max.policy_gradient(get_features=get_fp)
-    #         reward_sum.append(cur_reward)
-    #         rl_losses.append(cur_loss)
-    #
-    #     # plt.plot(reward_sum)
-    #     # plt.xlabel('Training iteration')
-    #     # plt.ylabel('score_sum')
-    #     # plt.savefig(f'../figure/{i}_{j + 1}_score_sum.png')
-    #     # plt.show()
-    #
-    #     plt.plot(rl_losses)
-    #     plt.xlabel('Training iteration')
-    #     plt.ylabel('Loss')
-    #     plt.savefig(f'../figure/{i}_{j + 1}_positive_Loss.png')
-    #     plt.show()
-    #
-    #     checkpoint = {
-    #         "net": model.state_dict(),
-    #         'optimizer': optimizer.state_dict(),
-    #     }
-    #     torch.save(checkpoint, os.path.join(config['out_dir'], f'{posi_iterations}_epoch_positive.pth'))
+        checkpoint = {
+            "net": model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+        }
+        torch.save(checkpoint, os.path.join(config.out_dir, f'{nega_train_iterations}_epoch_negative.pth'))
 
 
+   #Positive optimization
+    elif optimtask == 'posi':
+        for i in range(posi_iterations):
+            for j in trange(n_policy, desc='Policy gradient...'):
+                cur_reward, cur_loss = RL_max.policy_gradient(get_features=get_fp,task='optim_p')
+                # RL_max.policy_gradient(get_features=get_fp)
+                reward_sum.append(cur_reward)
+                rl_losses.append(cur_loss)
+
+            plt.plot(reward_sum)
+            plt.xlabel('Training iteration')
+            plt.ylabel('score_sum')
+            plt.savefig(f'../figure/{i}_{j + 1}_score_sum.png')
+            plt.show()
+
+            plt.plot(rl_losses)
+            plt.xlabel('Training iteration')
+            plt.ylabel('Loss')
+            plt.savefig(f'../figure/{i}_{j + 1}_positive_Loss.png')
+            plt.show()
+
+            sampled_mols = sample(model, num_batches=num_batches, num_samples=num_samples,
+                                  vocab=vocab, device=device, with_file=False, return_valid_mols=True,which_vocab='selfies')
+            if use_syba:
+                for i in range(len(sampled_mols)):
+                    try:
+                        mol = Chem.MolFromSmiles(sampled_mols[i])
+                        sys_score.append(sys_valid_model.predict(mol=mol))
+                    except:
+                        continue
+                print(f'Average systhesis score = {np.mean(sys_score)}')
+
+        checkpoint = {
+            "net": model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+        }
+        torch.save(checkpoint, os.path.join(config.out_dir, f'{posi_iterations}_epoch_positive.pth'))
+
+    else:
+        raise Exception('You must indicate the optimization target. (posi or nega).')
 
 
     # plot HS molecules' SA-score distribution.
-    path = f'../model_parameters/{nega_train_iterations}_epoch_negative.pth'
-    checkpoint = torch.load(path, map_location=device)
-    model.load_state_dict(checkpoint['net'])
-    print(f"Load model parameters from {path}.")
+    if optimtask == 'posi':
+        path = f'../model_parameters/{nega_train_iterations}_epoch_negative.pth'
+        checkpoint = torch.load(path, map_location=device)
+        model.load_state_dict(checkpoint['net'])
+        print(f"Load model parameters from {path}.")
 
-    sampled_mols = sample(model, num_batches=num_batches, num_samples=num_samples,
-                          vocab=vocab, device=device, with_file=False, return_value=True)
+        sampled_mols = sample(model, num_batches=num_batches, num_samples=num_samples,
+                              vocab=vocab, device=device, with_file=False, return_value=True)
 
-    with open('./negative.pkl', 'wb') as f:
-        pickle.dump(sampled_mols, f, protocol=4)
+        with open('./negative.pkl', 'wb') as f:
+            pickle.dump(sampled_mols, f, protocol=4)
 
-    sys_score = []
-    if use_syba:
-        for i in range(len(sampled_mols)):
-            try:
-                mol = Chem.MolFromSmiles(sampled_mols[i])
-                sys_score.append(sys_valid_model.predict(mol=mol))
-            except:
-                continue
-        print(f'Average synthesis score = {np.mean(sys_score)}')
+        sys_score = []
+        if use_syba:
+            for i in range(len(sampled_mols)):
+                try:
+                    mol = Chem.MolFromSmiles(sampled_mols[i])
+                    sys_score.append(sys_valid_model.predict(mol=mol))
+                except:
+                    continue
+            print(f'Average synthesis score = {np.mean(sys_score)}')
 
-    plot_hist(sys_score, label='Negative optimized molecules')
-
-
+        plot_hist(sys_score, label='Negative optimized molecules')
 
     # plot ES molecules' SA-score distribution.
-    path = f'../model_parameters/{posi_iterations}_epoch_positive.pth'
-    checkpoint = torch.load(path, map_location=device)
-    model.load_state_dict(checkpoint['net'])
-    print(f"Load model parameters from {path}.")
+    elif optimtask == 'nega':
+        path = f'../model_parameters/{posi_iterations}_epoch_positive.pth'
+        checkpoint = torch.load(path, map_location=device)
+        model.load_state_dict(checkpoint['net'])
+        print(f"Load model parameters from {path}.")
 
-    sampled_mols = sample(model, num_batches=num_batches, num_samples=num_samples,
-                          vocab=vocab, device=device, with_file=False, return_value=True)
+        sampled_mols = sample(model, num_batches=num_batches, num_samples=num_samples,
+                              vocab=vocab, device=device, with_file=False, return_value=True)
 
-    with open('./positive.pkl', 'wb') as f:
-        pickle.dump(sampled_mols, f, protocol=4)
+        with open('./positive.pkl', 'wb') as f:
+            pickle.dump(sampled_mols, f, protocol=4)
 
-    sys_score = []
+        sys_score = []
 
-    if use_syba:
-        for i in range(len(sampled_mols)):
-            try:
-                mol = Chem.MolFromSmiles(sampled_mols[i])
-                sys_score.append(sys_valid_model.predict(mol=mol))
-            except:
-                continue
-        print(f'Average synthesis score = {np.mean(sys_score)}')
+        if use_syba:
+            for i in range(len(sampled_mols)):
+                try:
+                    mol = Chem.MolFromSmiles(sampled_mols[i])
+                    sys_score.append(sys_valid_model.predict(mol=mol))
+                except:
+                    continue
+            print(f'Average synthesis score = {np.mean(sys_score)}')
 
-    plot_hist(sys_score, label='Positive optimized molecules')
+        plot_hist(sys_score, label='Positive optimized molecules')
+
+    #plot the comparison pic.
     plt.show()
+
 
 
 
