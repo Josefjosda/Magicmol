@@ -27,7 +27,10 @@ database_smiles_0.25.pkl / database_smiles_0.5.pkl : random choosed 25% / 50% of
 # Model Weight
 The weight file is available at : https://drive.google.com/drive/folders/10LDOoQQzuL0XeDRdsWidhVsoN8W1wxFU?usp=sharing
 
-Update: Model trained with SMILES is provided also in the above link. 
+**Update: Model trained with SMILES is provided also in the above link.**
+
+**Update: SMILES corpus and processing file are available now (see vocab).** 
+  
 
 However, we recommend you train the backbone model by yourself and leave it a cup of tea time (approximately 15 min on a single RTX3090) to finish this (XD) and experience how fast the process could be finished.
 
