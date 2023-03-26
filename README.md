@@ -34,11 +34,23 @@ The weight file is available at : https://drive.google.com/drive/folders/10LDOoQ
 
 However, we recommend you train the backbone model by yourself and leave it a cup of tea time (approximately 15 min on a single RTX3090) to finish this (XD) and experience how fast the process could be finished.
 
-## But how to run ? 
+# But how to run ? 
 
-Some modification is ongoing......
+## Model Training
 
-## Acknowledgement 
+
+By default the training process is done by adopting SELFIES, more super parameters can be customized based on your requirements.
+
+` python train.py `
+
+
+For example, training with SMILES:
+
+` python train.py --num_embeddings 101  --vocab_path ./vocab/chembl_regex_vocab.yaml  --which_vocab regex` 
+
+
+
+# Acknowledgement 
 
 If you think our research is interesting, consider citing this paper? 👇 
 
