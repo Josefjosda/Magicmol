@@ -20,7 +20,7 @@ database_smiles_0.25.pkl / database_smiles_0.5.pkl : random choosed 25% / 50% of
 ` python clean.py --in_path database.smi --out_path database_cleaned.smi  --vocab_path ../vocab/chembl_selfies_vocab.yaml `
 
 
-## Model Weight
+# Model Weight
 The weight file is available at : https://drive.google.com/drive/folders/10LDOoQQzuL0XeDRdsWidhVsoN8W1wxFU?usp=sharing
 
 Update: Model trained with SMILES is provided also in the above link. 
