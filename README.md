@@ -81,8 +81,11 @@ STONED-SELFIES is available at: https://github.com/aspuru-guzik-group/stoned-sel
 
 SYBA is available at https://github.com/lich-uct/syba
 
+A copy of this work is available at https://zenodo.org/record/7776906#.ZCsbYcpBwUE
+
 # Attention
 
 Noted that our work was done by SELIFES 1.x, the above version may caused encoding problems. 
 
 Pickle needs python 3.8 or higher version for using pickle.HIGHEST_PROTOCOL.
+
