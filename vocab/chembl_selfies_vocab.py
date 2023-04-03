@@ -26,6 +26,8 @@ def split_smiles_file(path,proportion):
 if __name__ == "__main__":
 
     dataset_path = "../chembl/database.cleaned.smi"
+    covid_drugs  = pd.read_csv('../chembl/with_score.csv')
+    drug_smiles = covid_drugs['isosmiles'].values
     output_vocab = "chembl_selfies_vocab.yaml"
     proportion = [0.5,0.25]
 
