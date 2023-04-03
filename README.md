@@ -67,6 +67,9 @@ Sampling with SELFIES corpus, for SMILES or DeepSMILES, change them to correspon
 
 ` python sample.py  --num_samples 1024  --num_batches 100   --vocab_path vocab/chembl_selfies_vocab.yaml  --model_weight_path model_parameters/trained_model.pth  --which_vocab selfies`
 
+## Testing
+
+We provided a simple way for computing some metrics. See  `after_generate.py`.
 
 # Acknowledgement 
 
