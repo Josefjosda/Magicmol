@@ -105,24 +105,21 @@ def sample(model,num_batches,num_samples,vocab,device,with_file=False,return_mol
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser("Magicmol")
-    parser.add_argument("-result_dir",
+    parser.add_argument("--result_dir",
                         required=False,
                         default='./generate_result',
                         help="directory of result files including configuration, \
                          loss, trained model, and sampled molecules"
                         )
-    parser.add_argument("-batch_size",
+    parser.add_argument("--batch_size",
                         required=False,
                         default=1024,
                         help="number of samples to generate per mini-batch"
                         )
-    parser.add_argument("-num_batches",
+    parser.add_argument("--num_batches",
                         required=False,
                         default=100,
                         help="number of batches to generate"
-                        )
-    parser.add_argument("--result_dir",
-                        default='./generate_result'
                         )
     parser.add_argument("--which_vocab",
                         required=False,
@@ -141,10 +138,7 @@ if __name__ == "__main__":
                         default=1024,
                         help="sampled molecules for a single step"
                         )
-    parser.add_argument("--num_batches",
-                        required=False,
-                        default=100,
-                        )
+
     parser.add_argument('--rnn_type', type=str, default='GRU')
     #SELFIES - 148 , regex - 101, DeepSMILES - 100
     parser.add_argument('--num_embeddings', type=int, default=100)
