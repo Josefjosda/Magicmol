@@ -8,11 +8,16 @@ from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, Draw
 import os
 import glob
+from rdkit.Chem import PandasTools, QED, Descriptors, rdMolDescriptors
 import pickle
 import yaml
+from  syba.syba import SybaClassifier
+from numpy import mean
+
+
 
 #Next we calculate the metrics for these molecules.
-generated_files = glob.glob('./reinforcement/*.pkl')
+generated_files = glob.glob('./generate_result/*.pkl')
 config_dir = "./generate_result/config.yaml"
 
 with open(config_dir, 'r') as f:
@@ -31,124 +36,74 @@ for i in tqdm.trange(len(original_smile)):
 
 
 
-valid_mols = []
+total = []
+# plt.figure(figsize=(300, 100), dpi=10)
+labels = ['SELFIES', 'SMILES']
+x = np.arange(len(generated_files))
+validate_model = SybaClassifier()
+validate_model.fitDefaultScore()
+
 for i in range(len(generated_files)):
-    line_count = 0
+    valid_mols = []
+    QED_ = []
+    match_rules = []
+    sa_ = []
+    ES = 0
     with open(generated_files[i],'rb') as f:
         temp = pickle.load(f)
-        for smi in temp:
-            line_count += 1
+        for j in tqdm.trange(len(temp)):
             try:
-                mol = Chem.MolFromSmiles(smi.strip())
+                mol = Chem.MolFromSmiles(temp[j].strip())
             except BaseException:
                 continue
             if mol is not None:
-                valid_mols.append(mol)
+                SMILES = Chem.MolToSmiles(mol,isomericSmiles=False, canonical=True)
+                valid_mols.append(SMILES)
+                QED_.append(QED.qed(mol))
+                sa = validate_model.predict(mol=mol)
+                sa_.append(sa)
+                if sa > 0:
+                    ES += 1
+                #Rule of Five
+                mw = np.round(Descriptors.MolWt(mol), 1)
+                if mw <= 500:
+                    logp = np.round(Descriptors.MolLogP(mol), 2)
+                    if  -0.4 < logp < 5.6:
+                        hba = rdMolDescriptors.CalcNumLipinskiHBA(mol)
+                        if hba < 10:
+                            rob = rdMolDescriptors.CalcNumRotatableBonds(mol)
+                            if rob < 10:
+                                hbd = rdMolDescriptors.CalcNumLipinskiHBD(mol)
+                                if hbd < 5:
+                                    match_rules.append(SMILES)
 
+
+
+    total.append(valid_mols)
+
+    Sm = valid_mols
+    Vm = set(valid_mols)
+
+
+    # a = set(valid_original_smiles)
+    # b = Vm & set(valid_original_smiles)
     print("Load file from {}".format(generated_files[i]))
 
-    print(f'Validity of generated_smiles - epoch{i}: ', f'{len(valid_mols) / line_count:.2%}')
+    print(f'Validity of generated_smiles - epoch{i}: ', f'{ len(Sm) / len(temp):.2%}')
 
-    print(f'Uniqueness of generated_smiles - epoch{i}:' , f'{len(set(valid_mols)) /  line_count:.2%}')
+    print(f'Uniqueness of generated_smiles - epoch{i}:' , f'{ len(Vm) / len(Sm) :.2%}')
 
-    print(f'Novelty of generated_smiles - epoch{i}:' , f'{ 1 - (len(set(valid_original_smiles) &  set(valid_mols)) /  line_count ):.2%}')
-    valid_mols.clear()
+    print(f'Novelty of generated_smiles - epoch{i}:' , f'{ 1 - ( len( Vm & set(valid_original_smiles) ) / len(Vm)  ):.2%}')
 
+    print(f'Average QED:{mean(QED_)}' )
 
-    #fine_tune
-    # ffps = []
-    # for mol in range(len(fine_tune_smiles)):
-    #     bv = AllChem.GetMACCSKeysFingerprint(fine_tune_smiles[mol])
-    #     fp = np.zeros(len(bv))
-    #     DataStructs.ConvertToNumpyArray(bv, fp)
-    #     ffps.append(fp)
-    #
-    # #generated
-    # Vfps = []
-    # for mol in range(0,len(valid_mols),100):
-    #     bv = AllChem.GetMACCSKeysFingerprint(valid_mols[mol])
-    #     fp = np.zeros(len(bv))
-    #     DataStructs.ConvertToNumpyArray(bv, fp)
-    #     Vfps.append(fp)
-    #
-    # #trained
-    # Ofps = []
-    # for mol in range(0,len(valid_original_smiles), 100):
-    #     bv = AllChem.GetMACCSKeysFingerprint(valid_original_smiles[mol])
-    #     fp = np.zeros(len(bv))
-    #     DataStructs.ConvertToNumpyArray(bv, fp)
-    #     Ofps.append(fp)
-    #
-    #
-    # print(f"Ploting figure epoch{i}")
-    # from sklearn.decomposition import PCA
-    # Vlen = len(Vfps)
-    # v_f_len = len(Vfps) + len(ffps)
-    # x = Vfps + ffps + Ofps
-    # pca = PCA(n_components=2, random_state=71)
-    # X = pca.fit_transform(x)
-    #
-    #
-    # plt.figure(figsize=(12, 9))
-    # # plt.scatter(X[v_f_len:, 0], X[v_f_len:, 1], marker='o',color='#00FF7F',edgecolors='k', label='Original SMILES')
-    # plt.scatter(X[:Vlen, 0], X[:Vlen, 1], marker='o',color='#9370DB',edgecolors='k', label='Generated SMILES')
-    # plt.scatter(X[Vlen:v_f_len, 0], X[Vlen:v_f_len, 1], marker='o', color='#A52A2A', edgecolors='k', label='Fine-tune SMILES')
-    # #00BFFF 蓝色参数
-    # #00FF7F 绿色参数
-    #
-    # plt.xlabel('Principal component 1')
-    # plt.ylabel('Principal component 2')
-    # plt.title("Chemical space comparison")
-    # plt.legend(['Original molecules','Generated molecules','Fine-tune SMILES'])
-    # plt.show()
-    # plt.savefig(f'chemical space.png')
-    # valid_mols.clear()
-    #
+    print(f'Average SA:{mean(sa_)}' )
 
+    print(f"{ES/len(valid_mols):.2%} percentage molecules belong to ES.")
 
+    print(f"{len(match_rules)/len(valid_mols):.2%} molecules match Lipinski‘s Rule of Five.")
 
-#original chems
-# import os
-# import tqdm
-# with open('./dataset/chembl28-cleaned.smi') as f:
-#     org_smiles = [l.rstrip() for l in f.readlines()]
-#
-# temp = []
-# if not os.path.exists(os.path.join('vocab','total_valid_chems.pkl')):
-#     with open(os.path.join('vocab','total_valid_chems.pkl'),'wb') as f:
-#         for i in tqdm.trange(len(org_smiles)):
-#             if Chem.MolFromSmiles(org_smiles[i]) is not None:
-#                 temp.append(Chem.MolFromSmiles(org_smiles[i].strip()))
-#         pickle.dump(temp,f,pickle.HIGHEST_PROTOCOL)
-#     org_mols = temp
-# else:
-#     with open(os.path.join('vocab', 'total_valid_chems.pkl'), 'rb') as f:
-#         org_mols = pickle.load(f)
-#
-#
-#
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    # valid_mols.clear()X
 
 
 
