@@ -61,6 +61,12 @@ For negative optimization:
 ` python synthetic_accessibility_modification.py --model_weight_path ../model_parameters/trained_model.pth  --use_syba True  --optim_task  nega`
 
 
+## Sampling 
+
+Sampling with SELFIES corpus, for SMILES or DeepSMILES, change them to correspond to your local directory 
+
+` python sample.py  --num_samples 1024  --num_batches 100   --vocab_path vocab/chembl_selfies_vocab.yaml  --model_weight_path model_parameters/trained_model.pth  --which_vocab selfies`
+
 
 # Acknowledgement 
 
