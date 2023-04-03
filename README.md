@@ -29,7 +29,12 @@ The weight file is available at : https://drive.google.com/drive/folders/10LDOoQ
 
 **Update: Model trained with SMILES is provided also in the above link.**
 
-**Update: SMILES corpus and processing file are available now (see vocab).** 
+**Update: SMILES / DeepSMILES corpus and processing code are available now (see vocab).** 
+
+Temporarily our Model adopting DeepSMILES reaches a relatively lower performance (with approximately 70% validity for generating molecules, I may tried to optimize 
+fix it later) 
+
+
   
 
 However, we recommend you train the backbone model by yourself and leave it a cup of tea time (approximately 15 min on a single RTX3090) to finish this (XD) and experience how fast the process could be finished.
