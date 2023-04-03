@@ -3,6 +3,8 @@
 
 Implemention of paper : Magicmol - A light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration https://www.researchsquare.com/article/rs-2124702/v1
 
+A copy of this work is available at https://zenodo.org/record/7776906#.ZCsbYcpBwUE
+
 Magicmol provides a light-weighted pipeline for de novo novel molecule generation and evolution (combine with STONED-SELFIES), and can be utilized for either positive sampling or negative sampling. The process can be visulized in the following picture. 
 
 ![image](example.jpg)
@@ -81,7 +83,6 @@ STONED-SELFIES is available at: https://github.com/aspuru-guzik-group/stoned-sel
 
 SYBA is available at https://github.com/lich-uct/syba
 
-A copy of this work is available at https://zenodo.org/record/7776906#.ZCsbYcpBwUE
 
 # Attention
 
