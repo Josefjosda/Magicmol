@@ -4,6 +4,7 @@ from rdkit.Chem.MolStandardize import rdMolStandardize
 from rdkit.Chem import MolStandardize
 import pickle
 RDLogger.DisableLog('rdApp.*')
+import argparse
 
 
 class MolCleaner:
@@ -29,9 +30,15 @@ class MolCleaner:
 
 if __name__ == "__main__":
 
-    in_path = "database.smi"
-    out_path = "mols_cleaned.smi"
-    pkl_out_path = "mols_cleaned.pkl"
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--in_path', type=str, default="database.smi")
+    parser.add_argument('--out_path', type=str, default="database_cleaned.smi")
+    parser.add_argument('--vocab_path', type=str, default="../vocab/chembl_selfies_vocab.yaml")
+    config = parser.parse_args()
+
+    in_path = config.in_path
+    out_path = config.out_path
+    pkl_out_path = config.vocab_path
 
     # with open(in_path, 'rb') as f:
     #     smiles = pickle.load(f)
