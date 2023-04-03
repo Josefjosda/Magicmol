@@ -31,7 +31,7 @@ The weight file is available at : https://drive.google.com/drive/folders/10LDOoQ
 
 **Update: SMILES / DeepSMILES corpus and processing code are available now (see vocab). Temporarily our Model adopting DeepSMILES reaches a relatively lower performance (with approximately 70% validity for generating molecules, I may tried to fix it later).** 
 
-However, we recommend you train the backbone model by yourself and leave it a cup of tea time (approximately 15 min on a single RTX3090) to finish this (XD) and experience how fast the process could be finished.
+However, we recommend you train the backbone model by yourself and leave it a cup of tea time (approximately 15 min on a single RTX3090) to finish this (XD) and experience how fast the process could be finished. The hardware for training and sampling can be altered as long as CUDA is available, and 6G video memory will also be affluent for training or sampling.
 
 # But how to run ? 
 
