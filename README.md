@@ -1,7 +1,7 @@
 
 # Magicmol
 
-Implemention of paper : Magicmol - A light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration https://www.researchsquare.com/article/rs-2124702/v1
+Implemention of paper : Magicmol - A light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration
 
 A copy of this work is available at https://zenodo.org/record/7776906#.ZCsbYcpBwUE
 
@@ -77,7 +77,7 @@ We provided a simple way for computing some metrics. See  `after_generate.py`.
 
 If you think our research is interesting, consider citing this paper? 👇 
 
-Lin Chen, Qing Shen, Jungang Lou et al. Magicmol - A light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration, 10 October 2022, PREPRINT (Version 1) available at Research Square [https://doi.org/10.21203/rs.3.rs-2124702/v1]
+Chen, L., Shen, Q., & Lou, J. (2023). Magicmol: a light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration. BMC bioinformatics, 24(1), 173. https://doi.org/10.1186/s12859-023-05286-0
 
 STONED-SELFIES is available at: https://github.com/aspuru-guzik-group/stoned-selfies
 
