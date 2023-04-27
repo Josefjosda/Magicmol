@@ -75,13 +75,13 @@ We provided a simple way for computing some metrics. See  `after_generate.py`.
 
 # Acknowledgement 
 
-If you think our research is interesting, consider citing this paper? 👇 
-
-Chen, L., Shen, Q., & Lou, J. (2023). Magicmol: a light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration. BMC bioinformatics, 24(1), 173. https://doi.org/10.1186/s12859-023-05286-0
-
 STONED-SELFIES is available at: https://github.com/aspuru-guzik-group/stoned-selfies
 
 SYBA is available at https://github.com/lich-uct/syba
+
+If you think our research is interesting, consider citing this paper? 👇 
+
+Chen, L., Shen, Q., & Lou, J. (2023). Magicmol: a light-weighted pipeline for drug-like molecule evolution and quick chemical space exploration. BMC bioinformatics, 24(1), 173. https://doi.org/10.1186/s12859-023-05286-0
 
 
 # Attention
